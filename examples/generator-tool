@@ -129,7 +129,7 @@ try:
          sys.exit(1)
 
 except getopt.GetoptError as error:
-   sys.stderr.write('ERROR: ' + error + '\n')
+   sys.stderr.write('ERROR: ' + str(error) + '\n')
    usage(1)
 if len(args) > 0:
    usage(1)
