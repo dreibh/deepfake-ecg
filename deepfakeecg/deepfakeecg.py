@@ -1,6 +1,6 @@
 import torch
 import os
-import numpy as np
+import numpy
 from tqdm import tqdm
 from . import Generator
 from pathlib import Path
@@ -8,14 +8,14 @@ from typing import Union, Literal
 
 
 def generate(num_of_sample: int, out_dir: Union[str, Path], start_id: int = 0,
-             run_device: Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> None:
+             runOnDevice: Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> None:
     """Generate multiple 8-lead ECG waveforms and save them as ASCII files
 
     Args:
         num_of_sample (int): Number of ECG samples to generate
         out_dir (Union[str, Path]): Output directory path where files will be saved
         start_id (int): Starting ID for the generated samples
-        run_device (Literal["cpu", "cuda"]): Device to run generation on ("cpu" or "cuda")
+        runOnDevice (Literal["cpu", "cuda"]): Device to run generation on ("cpu" or "cuda")
 
     Returns:
         None: Files are saved to the specified output directory with names {start_id}.asc to {start_id + num_of_sample - 1}.asc
@@ -23,7 +23,7 @@ def generate(num_of_sample: int, out_dir: Union[str, Path], start_id: int = 0,
     """
     root_dir = Path(__file__).parent
 
-    device = torch.device(run_device)
+    device = torch.device(runOnDevice)
 
     netG = Generator()
     checkpoint = torch.load(
@@ -49,18 +49,18 @@ def generate(num_of_sample: int, out_dir: Union[str, Path], start_id: int = 0,
         # asc_file.close()
 
 
-def generate_as_numpy(run_device: Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu"):
+def generate_as_numpy(runOnDevice: Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu"):
     """Generate a single 8-lead ECG waveform using deepfakeecg model
 
     Args:
-        run_device (str): Device to run generation on ("cpu" or "cuda")
+        runOnDevice (str): Device to run generation on ("cpu" or "cuda")
 
     Returns:
         numpy.ndarray: Array of shape (5000, 8) containing the ECG data
                       for leads [I, II, V1, V2, V3, V4, V5, V6]
     """
     root_dir = Path(__file__).parent
-    device = torch.device(run_device)
+    device = torch.device(runOnDevice)
 
     netG = Generator()
     checkpoint = torch.load(
@@ -82,3 +82,74 @@ def generate_as_numpy(run_device: Literal["cpu", "cuda"] = "cuda" if torch.cuda.
     data = out_rescaled.squeeze().t().detach().cpu().numpy()
 
     return data
+
+
+DATA_ECG8    = 8
+DATA_ECG12   = 12
+
+OUTPUT_NUMPY = 1
+OUTPUT_ASC   = 2
+OUTPUT_CSV   = 3
+
+def generate_NEW(numberOfSamples:   int = 1,
+                 ecgType:           int = DATA_ECG8,
+                 ecgLength:         int = 5000,
+                 outputFormat:      int = OUTPUT_NUMPY,
+                 outputFilePattern: Union[str, Path] = None,
+                 outputStartID:     int = 0,
+                 runOnDevice:       Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu"):
+   """Generate ECG waveforms using deepfakeecg model, with configurable
+      data type (8-lead or 12-lead ECG) and output type (numpy, file).
+
+   Args:
+      runOnDevice (str): Device to run generation on ("cpu" or "cuda")
+
+   Returns:
+      numpy.ndarray: Array of shape (ecgLength, 8) containing the ECG data
+                    for leads [I, II, V1, V2, V3, V4, V5, V6]
+   """
+
+   # ====== Initialise generator ============================================
+   root_dir = Path(__file__).parent
+   device = torch.device(runOnDevice)
+
+   generator = Generator()
+   checkpoint = torch.load(
+      os.path.join(root_dir, "checkpoints/g_stat.pt"),
+      map_location = device,
+      weights_only = True
+   )
+   generator.load_state_dict(checkpoint["stat_dict"])
+   generator.to(device)
+   generator.eval()
+
+   # ====== Generate ECGs ===================================================
+   results = [ ]
+   for i in tqdm(range(outputStartID, outputStartID + numberOfSamples)):
+      # ------ Create random noise  -----------------------------------------
+      noise = torch.Tensor(1, 8, ecgLength).to(device).uniform_(-1, 1)
+      # noise = noise.to(device)
+
+      # ------ Generate ECG -------------------------------------------------
+      generatedECG = generator(noise)
+
+      # ------ Rescale and convert to integer -------------------------------
+      generatedECG = generatedECG * 6000
+      generatedECG = generatedECG.int()
+
+      # ------ Make NumPy data ----------------------------------------------
+      data = generatedECG.squeeze().t().detach().cpu().numpy()
+
+      # ------ Write output file --------------------------------------------
+      if outputFormat in [ OUTPUT_ASC, OUTPUT_CSV ]:
+        outputFileName = outputFilePattern.format(number = str(i))
+        if outputFormat == OUTPUT_ASC:
+           numpy.savetxt(outputFileName, data, fmt = '%i')
+        elif outputFormat == OUTPUT_CSV:
+           numpy.savetxt(outputFileName, data, delimiter = ',', fmt = '%i')
+
+      # ------ Collect data in array ----------------------------------------
+      else:
+         results.append(data)
+
+   return results
