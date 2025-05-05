@@ -71,11 +71,23 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
       data type (8-lead or 12-lead ECG) and output type (numpy, file).
 
    Args:
+      numberOfECGs (int): The number of ECGs to generate
+      ecgLengthInSeconds (int): The ECG length in seconds
+      outputFormat (int): The format of the output
+         OUTPUT_NUMPY: list of NumPy objects
+         OUTPUT_ASC: text, as in the original code
+         OUTPUT_CSV: CSV, with additional column for time stamp in milliseconds
+      outputFilePattern: Pattern for naming output files, with format() placeholder "number", e.g. 'ecg-{number:06d}.csv'
+      outputStartID: Start ID for file numbering
       runOnDevice (str): Device to run generation on ("cpu" or "cuda")
 
    Returns:
-      numpy.ndarray: Array of shape (ecgLength, 8) containing the ECG data
-                    for leads [I, II, V1, V2, V3, V4, V5, V6]
+      In case of outputFormat OUTPUT_NUMPY:
+         List of arrays of shape (ecgLength, n) containing the ECG data.
+         For ECG type DATA_ECG8:
+            numpy.ndarray: [I, II, V1, V2, V3, V4, V5, V6]
+         For ECG type DATA_ECG12:
+            numpy.ndarray: [I, II, V1, V2, V3, V4, V5, V6, III, aVL, aVR, aVF]
    """
 
    # ====== Initialise generator ============================================
@@ -142,7 +154,7 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
                                      aVL.reshape(ecgLengthInSamples, 1),
                                      aVRL.reshape(ecgLengthInSamples, 1),
                                      aVF.reshape(ecgLengthInSamples, 1)
-                                    ) , 1 )
+                                   ) , 1 )
 
       # ------ Add time stamp for CSV output --------------------------------
       if outputFormat == OUTPUT_CSV:
