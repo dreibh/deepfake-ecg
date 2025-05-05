@@ -58,30 +58,29 @@ outputFormat      = deepfakeecg.OUTPUT_CSV
 try:
    options, args = getopt.getopt(
       sys.argv[1:],
-      't:n:o:f:',
-      [ 'ecgtype=',
-        'number=',
+      'n:t:l:f:o:',
+      [ 'number=',
+        'ecgtype=',
         'length=',
-        'output=',
-        'format='] )
+        'format=',
+        'output='
+      ])
    for option, optarg in options:
-      if option in ( '-t', '--type' ):
-         if optarg == 'ECG8':
-            ecgType = deepfakeecg.DATA_ECG8
-         elif optarg == 'ECG12':
-            ecgType = deepfakeecg.DATA_ECG12
-         else:
-            sys.stderr.write('ERROR: Invalid ECG type ' + optarg + '!\n')
-            sys.exit(1)
-      elif option in ( '-o', '--output' ):
-         outputPattern = optarg
-      elif option in ( '-n', '--number' ):
+      if option in ( '-n', '--number' ):
          try:
             ecgNumber = int(optarg)
             if ecgNumber < 1:
                raise Exception()
          except:
             sys.stderr.write('ERROR: Invalid ECG number ' + optarg + '!\n')
+            sys.exit(1)
+      elif option in ( '-t', '--type' ):
+         if optarg == 'ECG8':
+            ecgType = deepfakeecg.DATA_ECG8
+         elif optarg == 'ECG12':
+            ecgType = deepfakeecg.DATA_ECG12
+         else:
+            sys.stderr.write('ERROR: Invalid ECG type ' + optarg + '!\n')
             sys.exit(1)
       elif option in ( '-l', '--length' ):
          try:
@@ -91,13 +90,15 @@ try:
          except:
             sys.stderr.write('ERROR: Invalid ECG length ' + optarg + '!\n')
             sys.exit(1)
+      elif option in ( '-o', '--output' ):
+         outputFilePattern = optarg
       elif option in ( '-f', '--format' ):
          if optarg == 'numpy':
-            ecgType = deepfakeecg.OUTPUT_NUMPY
+            outputFormat = deepfakeecg.OUTPUT_NUMPY
          elif optarg == 'ascii':
-            ecgType = deepfakeecg.OUTPUT_ASC
+            outputFormat = deepfakeecg.OUTPUT_ASC
          elif optarg == 'csv':
-            ecgType = deepfakeecg.OUTPUT_CSV
+            outputFormat = deepfakeecg.OUTPUT_CSV
          else:
             sys.stderr.write('ERROR: Invalid format ' + optarg + '!\n')
             sys.exit(1)
@@ -115,11 +116,3 @@ if len(args) > 0:
 results = deepfakeecg.generate_NEW(ecgNumber, ecgType, ecgLength,
                                    outputFormat, outputFilePattern,
                                    0)
-
-# def generate_NEW(num_of_samples:      int = 1,
-#                  ecg__type:           int = DATA_ECG8,
-#                  ecg_length:          int = 5000,
-#                  output_format:       int = OUTPUT_NUMPY,
-#                  output_file_pattern: Union[str, Path] = None,
-#                  start_id:            int = 0,
-#                  run_device:          Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu"):
