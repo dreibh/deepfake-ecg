@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
-from deepfakeecg import generate
+import sys
+sys.path.append('..')
+
+import deepfakeecg
 import os
 
 # Create output directory if it doesn't exist
@@ -8,7 +11,7 @@ output_dir = "generated_ecgs"
 os.makedirs(output_dir, exist_ok=True)
 
 # Generate 5 ECG samples starting from ID 0
-generate(
+deepfakeecg.generate(
     num_of_sample=5,
     out_dir=output_dir,
     start_id=0
