@@ -199,6 +199,7 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
            matplotlib.pyplot.xlabel("Time [s]")
            matplotlib.pyplot.ylabel("Amplitude [μV]")
            matplotlib.pyplot.grid(True)
+           matplotlib.pyplot.ylim(-1000, +1000)
            matplotlib.pyplot.savefig(outputFileName)
 
       # ------ Collect data in array ----------------------------------------
