@@ -117,7 +117,7 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
    results = [ ]
    for i in tqdm.tqdm(range(outputStartID, outputStartID + numberOfECGs)):
       # ------ Create random noise  -----------------------------------------
-      noise = torch.Tensor(1, 8, ecgLengthInSamples, device = device).uniform_(-1, 1)
+      noise = torch.empty(1, 8, ecgLengthInSamples, device = device).uniform_(-1, 1)
 
       # ------ Generate ECG -------------------------------------------------
       generatedECG = generator(noise)
