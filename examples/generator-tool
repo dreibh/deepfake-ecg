@@ -49,7 +49,7 @@ def usage(exitCode = 0):
 
 # ====== Set defaults =======================================================
 ecgType           = deepfakeecg.DATA_ECG8
-ecgLength         = 5000
+ecgLength         = 10
 ecgNumber         = 1
 outputFilePattern = 'ecg-{number}.csv'
 outputFormat      = deepfakeecg.OUTPUT_CSV

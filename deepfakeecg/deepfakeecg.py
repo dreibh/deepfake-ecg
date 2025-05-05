@@ -46,43 +46,6 @@ from typing  import Union, Literal
 from . import Generator
 
 
-# ###### Generate Deepfake ECG as files #####################################
-def generate(num_of_sample: int,
-             out_dir:       Union[str, pathlib.Path],
-             start_id:      int = 0,
-             runOnDevice:   Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> None:
-   """Generate multiple 8-lead ECG waveforms and save them as ASCII files
-
-   Args:
-      num_of_sample (int): Number of ECG samples to generate
-      out_dir (Union[str, pathlib.Path]): Output directory path where files will be saved
-      start_id (int): Starting ID for the generated samples
-      runOnDevice (Literal["cpu", "cuda"]): Device to run generation on ("cpu" or "cuda")
-
-   Returns:
-      None: Files are saved to the specified output directory with names {start_id}.asc to {start_id + num_of_sample - 1}.asc
-      Each file contains ECG data in ASCII format with shape (5000, 8) for leads [I, II, V1, V2, V3, V4, V5, V6]
-    """
-
-   generateDeepfakeECGs(num_of_sample, DATA_ECG8, 5000, OUTPUT_ASC,
-                        os.path.join(out_dir, "{number}.asc"), 0)
-
-
-# ###### Generate Deepfake ECG as NumPy object ##############################
-def generate_as_numpy(runOnDevice: Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> numpy.ndarray:
-   """Generate a single 8-lead ECG waveform using deepfakeecg model
-
-   Args:
-       runOnDevice (str): Device to run generation on ("cpu" or "cuda")
-
-   Returns:
-       numpy.ndarray: Array of shape (5000, 8) containing the ECG data for leads [I, II, V1, V2, V3, V4, V5, V6]
-    """
-
-   results = generateDeepfakeECGs(1, DATA_ECG8, 5000, OUTPUT_NUMPY)
-   return results[0]
-
-
 # ------ Constants ----------------------------------------
 ECG_SAMPLING_RATE = 500
 
@@ -97,13 +60,13 @@ OUTPUT_CSV        = 3
 
 
 # ###### Generate Deepfake ECGs #############################################
-def generateDeepfakeECGs(numberOfECGs:      int = 1,
-                         ecgType:           int = DATA_ECG8,
-                         ecgLength:         int = 5000,
-                         outputFormat:      int = OUTPUT_NUMPY,
-                         outputFilePattern: Union[str, pathlib.Path] = None,
-                         outputStartID:     int = 0,
-                         runOnDevice:       Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu"):
+def generateDeepfakeECGs(numberOfECGs:       int = 1,
+                         ecgType:            int = DATA_ECG8,
+                         ecgLengthInSeconds: int = 10,
+                         outputFormat:       int = OUTPUT_NUMPY,
+                         outputFilePattern:  Union[str, pathlib.Path] = None,
+                         outputStartID:      int = 0,
+                         runOnDevice:        Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu"):
    """Generate ECG waveforms using deepfakeecg model, with configurable
       data type (8-lead or 12-lead ECG) and output type (numpy, file).
 
@@ -130,28 +93,29 @@ def generateDeepfakeECGs(numberOfECGs:      int = 1,
    generator.eval()
 
    # ====== Make milliseconds time stamp tensor =============================
-   timeStamp = torch.arange(0, ECG_SAMPLING_RATE * ecgLength,
+   ecgLengthInSamples = ecgLengthInSeconds * ECG_SAMPLING_RATE
+   timeStamp = torch.arange(0, ECG_SAMPLING_RATE * ecgLengthInSamples,
                             ECG_SAMPLING_RATE,
                             dtype = torch.int32, device = device)
-   # Timestamp shape is [ ecgLength ]
-   timeStamp = torch.t(timeStamp.reshape(1, ecgLength))
-   # Now, shape is [ ecgLength, 1 ]
+   # Timestamp shape is [ ecgLengthInSamples ]
+   timeStamp = torch.t(timeStamp.reshape(1, ecgLengthInSamples))
+   # Now, shape is [ ecgLengthInSamples, 1 ]
 
    # ====== Generate ECGs ===================================================
    results = [ ]
    for i in tqdm.tqdm(range(outputStartID, outputStartID + numberOfECGs)):
       # ------ Create random noise  -----------------------------------------
-      noise = torch.Tensor(1, 8, ecgLength, device = device).uniform_(-1, 1)
+      noise = torch.Tensor(1, 8, ecgLengthInSamples, device = device).uniform_(-1, 1)
 
       # ------ Generate ECG -------------------------------------------------
       generatedECG = generator(noise)
-      # Output shape is [1, 8, ecgLength].
+      # Output shape is [1, 8, ecgLengthInSamples].
 
       # ------ Rescale and convert to integer -------------------------------
       generatedECG = generatedECG * 6000
       generatedECG = generatedECG.int()
       generatedECG = torch.transpose(generatedECG.squeeze(), 0, 1)
-      # Now, shape is [ecgLength, 8].
+      # Now, shape is [ecgLengthInSamples, 8].
 
       # ------ EGC12 computations -------------------------------------------
       if ecgType == DATA_ECG12:
@@ -170,20 +134,20 @@ def generateDeepfakeECGs(numberOfECGs:      int = 1,
          aVL     = (leadI - leadIII) / 2
          aVRL    = -(leadI + leadII) / 2
          aVF     = (leadII + leadIII) / 2
-         # Shape is [ ecgLength ]
+         # Shape is [ ecgLengthInSamples ]
 
-         # Reshape to [ ecgLength, 1 ] and combine with generatedECG:
+         # Reshape to [ ecgLengthInSamples, 1 ] and combine with generatedECG:
          generatedECG = torch.cat( ( generatedECG,
-                                     leadIII.reshape(ecgLength, 1),
-                                     aVL.reshape(ecgLength, 1),
-                                     aVRL.reshape(ecgLength, 1),
-                                     aVF.reshape(ecgLength, 1)
+                                     leadIII.reshape(ecgLengthInSamples, 1),
+                                     aVL.reshape(ecgLengthInSamples, 1),
+                                     aVRL.reshape(ecgLengthInSamples, 1),
+                                     aVF.reshape(ecgLengthInSamples, 1)
                                     ) , 1 )
 
       # ------ Add time stamp for CSV output --------------------------------
       if outputFormat == OUTPUT_CSV:
          # Combine time stamp with generated ECG samples.
-         # Now, shape is [ecgLength, 1+8].
+         # Now, shape is [ecgLengthInSamples, 1+8].
          generatedECG = torch.cat( (timeStamp, generatedECG), 1 )
          # print(generatedECG[:,0])
 
@@ -215,3 +179,43 @@ def generateDeepfakeECGs(numberOfECGs:      int = 1,
          raise Exception('Invalid output format!')
 
    return results
+
+
+# ###### Generate Deepfake ECG as files #####################################
+def generate(num_of_sample: int,
+             out_dir:       Union[str, pathlib.Path],
+             start_id:      int = 0,
+             runOnDevice:   Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> None:
+   """Generate multiple 8-lead ECG waveforms and save them as ASCII files
+
+   Args:
+      num_of_sample (int): Number of ECG samples to generate
+      out_dir (Union[str, pathlib.Path]): Output directory path where files will be saved
+      start_id (int): Starting ID for the generated samples
+      runOnDevice (Literal["cpu", "cuda"]): Device to run generation on ("cpu" or "cuda")
+
+   Returns:
+      None: Files are saved to the specified output directory with names {start_id}.asc to {start_id + num_of_sample - 1}.asc
+      Each file contains ECG data in ASCII format with shape (5000, 8) for leads [I, II, V1, V2, V3, V4, V5, V6]
+    """
+
+   generateDeepfakeECGs(num_of_sample, DATA_ECG8,
+                        int(5000 / ECG_SAMPLING_RATE), OUTPUT_ASC,
+                        os.path.join(out_dir, "{number}.asc"), 0)
+
+
+# ###### Generate Deepfake ECG as NumPy object ##############################
+def generate_as_numpy(runOnDevice: Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> numpy.ndarray:
+   """Generate a single 8-lead ECG waveform using deepfakeecg model
+
+   Args:
+       runOnDevice (str): Device to run generation on ("cpu" or "cuda")
+
+   Returns:
+       numpy.ndarray: Array of shape (5000, 8) containing the ECG data for leads [I, II, V1, V2, V3, V4, V5, V6]
+    """
+
+   results = generateDeepfakeECGs(1, DATA_ECG8,
+                                  int(5000 / ECG_SAMPLING_RATE),
+                                  OUTPUT_NUMPY)
+   return results[0]
