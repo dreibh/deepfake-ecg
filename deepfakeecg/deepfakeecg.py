@@ -1,10 +1,12 @@
-import torch
-import os
 import numpy
-from tqdm import tqdm
-from . import Generator
+import os
+import sys
+import torch
+from tqdm    import tqdm
 from pathlib import Path
-from typing import Union, Literal
+from typing  import Union, Literal
+
+from . import Generator
 
 
 def generate(num_of_sample: int, out_dir: Union[str, Path], start_id: int = 0,
@@ -98,7 +100,7 @@ OUTPUT_CSV        = 3
 
 
 # ###### Generate Deepfake ECGs #############################################
-def generate_NEW(numberOfSamples:   int = 1,
+def generate_NEW(numberOfECGs:      int = 1,
                  ecgType:           int = DATA_ECG8,
                  ecgLength:         int = 5000,
                  outputFormat:      int = OUTPUT_NUMPY,
@@ -140,7 +142,9 @@ def generate_NEW(numberOfSamples:   int = 1,
 
    # ====== Generate ECGs ===================================================
    results = [ ]
-   for i in tqdm(range(outputStartID, outputStartID + numberOfSamples)):
+   print(ecgType)
+   sys.exit(1)
+   for i in tqdm.tqdm(range(outputStartID, outputStartID + numberOfECGs)):
       # ------ Create random noise  -----------------------------------------
       # !!!!
       noise = torch.Tensor(1, 8, ecgLength, device = device).uniform_(-1, 1)
@@ -161,15 +165,33 @@ def generate_NEW(numberOfSamples:   int = 1,
          # Now, shape is [ecgLength, 1+8].
          generatedECG = torch.cat( (timeStamp, generatedECG), 1 )
 
+      # ------ EGC12 computations -------------------------------------------
+      if ecgType == DATA_ECG12:
+         # Details and formulae:
+         # https://ecgwaves.com/topic/ekg-ecg-leads-electrodes-systems-limb-chest-precordial/
+
+         # Lead III = Lead II - Lead I
+         # aVL      = (Leaf I - Lead III) / 2
+         # aVRL     = -(Leaf I + Lead II) / 2
+         # aVF      = (Lead II + Lead III) / 2
+
+         TBD
+
       # ------ Make NumPy data ----------------------------------------------
       data = generatedECG.detach().cpu().numpy()
 
       # ------ Write output file --------------------------------------------
       if outputFormat in [ OUTPUT_ASC, OUTPUT_CSV ]:
-        outputFileName = outputFilePattern.format(number = str(i))
+        outputFileName = outputFilePattern.format(number = i)
         if outputFormat == OUTPUT_ASC:
            numpy.savetxt(outputFileName, data, fmt = '%i')
         elif outputFormat == OUTPUT_CSV:
+           if ecgType == DATA_ECG8:
+              header = 'Timestamp,LeadI,LeadII,V1,V2,V3,V4,V5,V6'
+           elif ecgType == DATA_ECG12:
+              header = 'Timestamp,LeadI,LeadII,V1,V2,V3,V4,V5,V6,LeadIII,aVL,aVR,aVF'
+           else:
+              raise Exception('Invalid ECG type!')
            numpy.savetxt(outputFileName, data,
                          header    = 'Timestamp,LeadI,LeadII,V1,V2,V3,V4,V5,V6',
                          comments  = '',
@@ -177,7 +199,9 @@ def generate_NEW(numberOfSamples:   int = 1,
                          fmt       = '%i')
 
       # ------ Collect data in array ----------------------------------------
-      else:
+      if outputFormat == OUTPUT_NUMPY:
          results.append(data)
+      else:
+         raise Exception('Invalid output format!')
 
    return results
