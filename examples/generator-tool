@@ -41,7 +41,7 @@ import numpy
 
 # ###### Print usage and exit ###############################################
 def usage(exitCode = 0):
-   sys.stdout.write('Usage: ' + sys.argv[0] + ' [-t|--type ECG8|ECG12] [-f|--format numpy|ascii] [-o|--output filename_pattern]\n')
+   sys.stdout.write('Usage: ' + sys.argv[0] + ' [-t|--type ECG8|ECG12] [-f|--format numpy|ascii] [-o|--output filename_pattern] [-s|--start-id number]\n')
    sys.exit(exitCode)
 
 
@@ -53,17 +53,19 @@ ecgLength         = 10
 ecgNumber         = 1
 outputFilePattern = 'ecg-{number}.csv'
 outputFormat      = deepfakeecg.OUTPUT_CSV
+outputStartID     = 0
 
 # ====== Handle arguments ===================================================
 try:
    options, args = getopt.getopt(
       sys.argv[1:],
-      'n:t:l:f:o:',
+      'n:t:l:f:o:s:',
       [ 'number=',
         'ecgtype=',
         'length=',
         'format=',
-        'output='
+        'output=',
+        'startid='
       ])
    for option, optarg in options:
       if option in ( '-n', '--number' ):
@@ -102,6 +104,14 @@ try:
          else:
             sys.stderr.write('ERROR: Invalid format ' + optarg + '!\n')
             sys.exit(1)
+      elif option in ( '-s', '--startid' ):
+         try:
+            outputStartID = int(optarg)
+            if outputStartID < 0:
+               raise Exception()
+         except:
+            sys.stderr.write('ERROR: Invalid start ID ' + optarg + '!\n')
+            sys.exit(1)
       else:
          sys.stderr.write('ERROR: Invalid option ' + option + '!\n')
          sys.exit(1)
@@ -115,4 +125,4 @@ if len(args) > 0:
 # ====== Generate ECGs ======================================================
 results = deepfakeecg.generateDeepfakeECGs(ecgNumber, ecgType, ecgLength,
                                            outputFormat, outputFilePattern,
-                                           0)
+                                           outputStartID)
