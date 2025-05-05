@@ -113,6 +113,6 @@ if len(args) > 0:
    usage(1)
 
 # ====== Generate ECGs ======================================================
-results = deepfakeecg.generate_NEW(ecgNumber, ecgType, ecgLength,
-                                   outputFormat, outputFilePattern,
-                                   0)
+results = deepfakeecg.generateDeepfakeECGs(ecgNumber, ecgType, ecgLength,
+                                           outputFormat, outputFilePattern,
+                                           0)
