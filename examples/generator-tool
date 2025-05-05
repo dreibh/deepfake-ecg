@@ -51,7 +51,7 @@ def usage(exitCode = 0):
 ecgType           = deepfakeecg.DATA_ECG8
 ecgLength         = 5000
 ecgNumber         = 1
-outputFilePattern = 'ecg-{number}.data'
+outputFilePattern = 'ecg-{number}.csv'
 outputFormat      = deepfakeecg.OUTPUT_CSV
 
 # ====== Handle arguments ===================================================
@@ -96,6 +96,8 @@ try:
             ecgType = deepfakeecg.OUTPUT_NUMPY
          elif optarg == 'ascii':
             ecgType = deepfakeecg.OUTPUT_ASC
+         elif optarg == 'csv':
+            ecgType = deepfakeecg.OUTPUT_CSV
          else:
             sys.stderr.write('ERROR: Invalid format ' + optarg + '!\n')
             sys.exit(1)
