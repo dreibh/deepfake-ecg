@@ -12,7 +12,7 @@
 #                https://github.com/vlbthambawita/deepfake-ecg
 # ==========================================================================
 #
-# Command-Line Generator Tool
+# Deepfake ECG Example
 # Copyright (C) 2025 by Turtle <erencemayez@gmail.com>
 # Copyright (C) 2025 by Thomas Dreibholz
 #

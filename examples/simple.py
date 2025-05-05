@@ -12,7 +12,7 @@
 #                https://github.com/vlbthambawita/deepfake-ecg
 # ==========================================================================
 #
-# Command-Line Generator Tool
+# Deepfake ECG Example
 # Copyright (C) 2025 by Turtle <erencemayez@gmail.com>
 # Copyright (C) 2025 by Thomas Dreibholz
 #
@@ -35,4 +35,4 @@
 
 import deepfakeecg
 
-deepfakeecg.generate(5, ".", start_id=0)  # Generate 5 ECGs to the current folder starting from id=0
+deepfakeecg.generate(5, ".", start_id = 0)  # Generate 5 ECGs to the current folder starting from id=0

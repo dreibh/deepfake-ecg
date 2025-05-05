@@ -12,7 +12,7 @@
 #                https://github.com/vlbthambawita/deepfake-ecg
 # ==========================================================================
 #
-# Command-Line Generator Tool
+# Deepfake ECG Example
 # Copyright (C) 2025 by Turtle <erencemayez@gmail.com>
 # Copyright (C) 2025 by Thomas Dreibholz
 #
@@ -45,9 +45,9 @@ os.makedirs(output_dir, exist_ok=True)
 
 # Generate 5 ECG samples starting from ID 0
 deepfakeecg.generate(
-    num_of_sample=5,
-    out_dir=output_dir,
-    start_id=0
+    num_of_sample = 5,
+    out_dir       = output_dir,
+    start_id      = 0
 )
 
 print(f"Generated 5 ECG samples in {output_dir}")
