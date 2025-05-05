@@ -37,11 +37,12 @@ import deepfakeecg
 import getopt
 import matplotlib.pyplot
 import numpy
+import torch
 
 
 # ###### Print usage and exit ###############################################
 def usage(exitCode = 0):
-   sys.stdout.write('Usage: ' + sys.argv[0] + ' [-t|--type ECG8|ECG12] [-f|--format numpy|ascii] [-o|--output filename_pattern] [-s|--start-id number]\n')
+   sys.stdout.write('Usage: ' + sys.argv[0] + ' [-t|--type ECG8|ECG12] [-f|--format numpy|ascii] [-o|--output filename_pattern] [-s|--start-id number] [-d|--device cpu|cuda] [-v|--version]\n')
    sys.exit(exitCode)
 
 
@@ -54,18 +55,21 @@ ecgNumber         = 1
 outputFilePattern = 'ecg-{number}.csv'
 outputFormat      = deepfakeecg.OUTPUT_CSV
 outputStartID     = 0
+runOnDevice       = "cuda" if torch.cuda.is_available() else "cpu"
 
 # ====== Handle arguments ===================================================
 try:
    options, args = getopt.getopt(
       sys.argv[1:],
-      'n:t:l:f:o:s:',
+      'n:t:l:f:o:s:d:v',
       [ 'number=',
         'ecgtype=',
         'length=',
         'format=',
         'output=',
-        'startid='
+        'startid=',
+        'device=',
+        'version'
       ])
    for option, optarg in options:
       if option in ( '-n', '--number' ):
@@ -112,6 +116,14 @@ try:
          except:
             sys.stderr.write('ERROR: Invalid start ID ' + optarg + '!\n')
             sys.exit(1)
+      elif option in ( '-d', '--device' ):
+         runOnDevice = optarg
+      elif option in ( '-v', '--version' ):
+         sys.stdout.write('PyTorch version: ' + torch.__version__ + '\n')
+         sys.stdout.write('CUDA version:    ' + torch.version.cuda + '\n')
+         sys.stdout.write('CUDA available:  ' + ('yes' if torch.cuda.is_available() else 'no') + '\n')
+         sys.stdout.write('Device:          ' + runOnDevice + '\n')
+         sys.exit(1)
       else:
          sys.stderr.write('ERROR: Invalid option ' + option + '!\n')
          sys.exit(1)
@@ -125,4 +137,5 @@ if len(args) > 0:
 # ====== Generate ECGs ======================================================
 results = deepfakeecg.generateDeepfakeECGs(ecgNumber, ecgType, ecgLength,
                                            outputFormat, outputFilePattern,
-                                           outputStartID)
+                                           outputStartID,
+                                           runOnDevice)
