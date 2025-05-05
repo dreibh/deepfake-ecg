@@ -42,7 +42,7 @@ import torch
 
 # ###### Print usage and exit ###############################################
 def usage(exitCode = 0):
-   sys.stdout.write('Usage: ' + sys.argv[0] + ' [-t|--type ECG8|ECG12] [-f|--format numpy|ascii] [-o|--output filename_pattern] [-s|--start-id number] [-d|--device cpu|cuda] [-v|--version]\n')
+   sys.stdout.write('Usage: ' + sys.argv[0] + ' [-t|--type ECG8|ECG12] [-f|--format numpy|ascii] [-o|--output filename_pattern] [-s|--start-id number] [-e|--leads {I,II,III,aVL,aVR,aVF,V1,V2,V3,V4,V5,V6}] [-d|--device cpu|cuda] [-v|--version]\n')
    sys.exit(exitCode)
 
 
@@ -55,19 +55,21 @@ ecgNumber         = 1
 outputFilePattern = None
 outputFormat      = deepfakeecg.OUTPUT_CSV
 outputStartID     = 0
+outputLeads       = [ 'I' ]
 runOnDevice       = "cuda" if torch.cuda.is_available() else "cpu"
 
 # ====== Handle arguments ===================================================
 try:
    options, args = getopt.getopt(
       sys.argv[1:],
-      'n:t:l:f:o:s:d:v',
+      'n:t:l:f:o:s:e:d:v',
       [ 'number=',
         'ecgtype=',
         'length=',
         'format=',
         'output=',
         'startid=',
+        'leads=',
         'device=',
         'version'
       ])
@@ -120,6 +122,8 @@ try:
             sys.exit(1)
       elif option in ( '-d', '--device' ):
          runOnDevice = optarg
+      elif option in ( '-e', '--leads' ):
+         outputLeads = optarg.split(',')
       elif option in ( '-v', '--version' ):
          sys.stdout.write('PyTorch version: ' + torch.__version__ + '\n')
          sys.stdout.write('CUDA version:    ' + torch.version.cuda + '\n')
@@ -147,5 +151,5 @@ if outputFilePattern == None:
 # ====== Generate ECGs ======================================================
 results = deepfakeecg.generateDeepfakeECGs(ecgNumber, ecgType, ecgLength,
                                            outputFormat, outputFilePattern,
-                                           outputStartID,
+                                           outputStartID, outputLeads,
                                            runOnDevice)

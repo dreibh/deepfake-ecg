@@ -60,6 +60,21 @@ OUTPUT_ASC        = 2
 OUTPUT_CSV        = 3
 OUTPUT_PDF        = 4
 
+ECG_LEADS = {
+   'I':   [  1, 'Lead I',   DATA_ECG8 ],
+   'II':  [  2, 'Lead II',  DATA_ECG8 ],
+   'V1':  [  3, 'V1',       DATA_ECG8 ],
+   'V2':  [  4, 'V2',       DATA_ECG8 ],
+   'V3':  [  5, 'V3',       DATA_ECG8 ],
+   'V4':  [  6, 'V4',       DATA_ECG8 ],
+   'V5':  [  7, 'V5',       DATA_ECG8 ],
+   'V6':  [  8, 'V6',       DATA_ECG8 ],
+   'III': [  9, 'Lead III', DATA_ECG12 ],
+   'aVL': [ 10, 'aVL',      DATA_ECG12 ],
+   'aVR': [ 11, 'aVR',      DATA_ECG12 ],
+   'aVF': [ 12, 'aVF',      DATA_ECG12 ]
+}
+
 
 # ###### Generate Deepfake ECGs #############################################
 def generateDeepfakeECGs(numberOfECGs:       int = 1,
@@ -68,7 +83,8 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
                          outputFormat:       int = OUTPUT_NUMPY,
                          outputFilePattern:  typing.Union[str, pathlib.Path] = None,
                          outputStartID:      int = 0,
-                         runOnDevice:        typing.Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu"):
+                         outputLeads:        list = [ 'I' ],
+                         runOnDevice:        typing.Literal['cpu', 'cuda'] = 'cuda' if torch.cuda.is_available() else 'cpu'):
    """Generate ECG waveforms using deepfakeecg model, with configurable
       data type (8-lead or 12-lead ECG) and output type (numpy, file).
 
@@ -79,9 +95,10 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
          OUTPUT_NUMPY: list of NumPy objects
          OUTPUT_ASC: text, as in the original code
          OUTPUT_CSV: CSV, with additional column for time stamp in milliseconds
-      outputFilePattern: Pattern for naming output files, with format() placeholder "number", e.g. 'ecg-{number:06d}.csv'
+         OUTPUT_PDF: PDF, with plot of the output
+      outputFilePattern: Pattern for naming output files, with format() placeholder 'number', e.g. 'ecg-{number:06d}.csv'
       outputStartID: Start ID for file numbering
-      runOnDevice (str): Device to run generation on ("cpu" or "cuda")
+      runOnDevice (str): Device to run generation on ('cpu' or 'cuda')
 
    Returns:
       In case of outputFormat OUTPUT_NUMPY:
@@ -98,11 +115,11 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
 
    generator = Generator()
    checkpoint = torch.load(
-      os.path.join(root_dir, "checkpoints/g_stat.pt"),
+      os.path.join(root_dir, 'checkpoints/g_stat.pt'),
       map_location = device,
       weights_only = True
    )
-   generator.load_state_dict(checkpoint["stat_dict"])
+   generator.load_state_dict(checkpoint['stat_dict'])
    generator.to(device)
    generator.eval()
 
@@ -193,11 +210,20 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
         # ------ PDF --------------------------------------------------------
         elif outputFormat == OUTPUT_PDF:
            matplotlib.pyplot.figure(figsize=(15, 3))
-           matplotlib.pyplot.plot(data[:, 1], label="Lead I")
+           for outputLead in outputLeads:
+              try:
+                 outputLeadIndex = ECG_LEADS[outputLead][0]
+                 outputLeadLabel = ECG_LEADS[outputLead][1]
+                 outputLeadType  = ECG_LEADS[outputLead][2]
+              except:
+                  raise Exception('Invalid lead ' + outputLead + '!')
+              if outputLeadType > ecgType:
+                  raise Exception('Invalid lead ' + outputLead + ' for this ECG type!')
+              matplotlib.pyplot.plot(data[:, outputLeadIndex], label = outputLeadLabel)
            matplotlib.pyplot.legend()
-           matplotlib.pyplot.title("Generated ECG — Lead I")
-           matplotlib.pyplot.xlabel("Time [s]")
-           matplotlib.pyplot.ylabel("Amplitude [μV]")
+           matplotlib.pyplot.title('Generated ECG — ID ' + str(i))
+           matplotlib.pyplot.xlabel('Time [s]')
+           matplotlib.pyplot.ylabel('Amplitude [μV]')
            matplotlib.pyplot.grid(True)
            matplotlib.pyplot.ylim(-1000, +1000)
            matplotlib.pyplot.savefig(outputFileName)
@@ -213,14 +239,14 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
 def generate(num_of_sample: int,
              out_dir:       typing.Union[str, pathlib.Path],
              start_id:      int = 0,
-             runOnDevice:   typing.Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> None:
+             runOnDevice:   typing.Literal['cpu', 'cuda'] = 'cuda' if torch.cuda.is_available() else 'cpu') -> None:
    """Generate multiple 8-lead ECG waveforms and save them as ASCII files
 
    Args:
       num_of_sample (int): Number of ECG samples to generate
       out_dir (typing.Union[str, pathlib.Path]): Output directory path where files will be saved
       start_id (int): Starting ID for the generated samples
-      runOnDevice (typing.Literal["cpu", "cuda"]): Device to run generation on ("cpu" or "cuda")
+      runOnDevice (typing.Literal['cpu', 'cuda']): Device to run generation on ('cpu' or 'cuda')
 
    Returns:
       None: Files are saved to the specified output directory with names {start_id}.asc to {start_id + num_of_sample - 1}.asc
@@ -229,15 +255,15 @@ def generate(num_of_sample: int,
 
    generateDeepfakeECGs(num_of_sample, DATA_ECG8,
                         int(5000 / ECG_SAMPLING_RATE), OUTPUT_ASC,
-                        os.path.join(out_dir, "{number}.asc"), 0)
+                        os.path.join(out_dir, '{number}.asc'), 0)
 
 
 # ###### Generate Deepfake ECG as NumPy object ##############################
-def generate_as_numpy(runOnDevice: typing.Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> numpy.ndarray:
+def generate_as_numpy(runOnDevice: typing.Literal['cpu', 'cuda'] = 'cuda' if torch.cuda.is_available() else 'cpu') -> numpy.ndarray:
    """Generate a single 8-lead ECG waveform using deepfakeecg model
 
    Args:
-       runOnDevice (str): Device to run generation on ("cpu" or "cuda")
+       runOnDevice (str): Device to run generation on ('cpu' or 'cuda')
 
    Returns:
        numpy.ndarray: Array of shape (5000, 8) containing the ECG data for leads [I, II, V1, V2, V3, V4, V5, V6]
