@@ -52,7 +52,7 @@ def usage(exitCode = 0):
 ecgType           = deepfakeecg.DATA_ECG8
 ecgLength         = 10
 ecgNumber         = 1
-outputFilePattern = 'ecg-{number}.csv'
+outputFilePattern = None
 outputFormat      = deepfakeecg.OUTPUT_CSV
 outputStartID     = 0
 runOnDevice       = "cuda" if torch.cuda.is_available() else "cpu"
@@ -91,7 +91,7 @@ try:
       elif option in ( '-l', '--length' ):
          try:
             ecgLength = int(optarg)
-            if ecgLength < 50:
+            if ecgLength < 1:
                raise Exception()
          except:
             sys.stderr.write('ERROR: Invalid ECG length ' + optarg + '!\n')
@@ -105,6 +105,8 @@ try:
             outputFormat = deepfakeecg.OUTPUT_ASC
          elif optarg == 'csv':
             outputFormat = deepfakeecg.OUTPUT_CSV
+         elif optarg == 'pdf':
+            outputFormat = deepfakeecg.OUTPUT_PDF
          else:
             sys.stderr.write('ERROR: Invalid format ' + optarg + '!\n')
             sys.exit(1)
@@ -133,6 +135,14 @@ except getopt.GetoptError as error:
    usage(1)
 if len(args) > 0:
    usage(1)
+
+if outputFilePattern == None:
+   if outputFormat == deepfakeecg.OUTPUT_CSV:
+      outputFilePattern = 'ecg-{number}.csv'
+   elif outputFormat == deepfakeecg.OUTPUT_PDF:
+      outputFilePattern = 'ecg-{number}.pdf'
+   else:
+      outputFilePattern = 'ecg-{number}.asc'
 
 # ====== Generate ECGs ======================================================
 results = deepfakeecg.generateDeepfakeECGs(ecgNumber, ecgType, ecgLength,

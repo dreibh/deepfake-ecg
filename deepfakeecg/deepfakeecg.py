@@ -35,6 +35,7 @@
 # * Turtle <erencemayez@gmail.com>
 # * Thomas Dreibholz <dreibh@simula.no>
 
+import matplotlib
 import numpy
 import os
 import pathlib
@@ -57,6 +58,7 @@ DATA_ECG12        = 12
 OUTPUT_NUMPY      = 1
 OUTPUT_ASC        = 2
 OUTPUT_CSV        = 3
+OUTPUT_PDF        = 4
 
 
 # ###### Generate Deepfake ECGs #############################################
@@ -157,20 +159,24 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
                                    ) , 1 )
 
       # ------ Add time stamp for CSV output --------------------------------
-      if outputFormat == OUTPUT_CSV:
+      if not outputFormat in [ OUTPUT_ASC, OUTPUT_NUMPY ]:
          # Combine time stamp with generated ECG samples.
          # Now, shape is [ecgLengthInSamples, 1+8].
-         generatedECG = torch.cat( (timeStamp, generatedECG), 1 )
+         generatedECG = torch.cat( ( timeStamp, generatedECG ), 1 )
          # print(generatedECG[:,0])
 
       # ------ Make NumPy data ----------------------------------------------
       data = generatedECG.detach().cpu().numpy()
 
       # ------ Write output file --------------------------------------------
-      if outputFormat in [ OUTPUT_ASC, OUTPUT_CSV ]:
+      if outputFormat in [ OUTPUT_ASC, OUTPUT_CSV, OUTPUT_PDF ]:
         outputFileName = outputFilePattern.format(number = i)
+
+        # ------ ASCII text -------------------------------------------------
         if outputFormat == OUTPUT_ASC:
            numpy.savetxt(outputFileName, data, fmt = '%i')
+
+        # ------ CSV --------------------------------------------------------
         elif outputFormat == OUTPUT_CSV:
            if ecgType == DATA_ECG8:
               header = 'Timestamp,LeadI,LeadII,V1,V2,V3,V4,V5,V6'
@@ -184,11 +190,20 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
                          delimiter = ',',
                          fmt       = '%i')
 
+        # ------ PDF --------------------------------------------------------
+        elif outputFormat == OUTPUT_PDF:
+           matplotlib.pyplot.figure(figsize=(15, 3))
+           matplotlib.pyplot.plot(data[:, 1], label="Lead I")
+           matplotlib.pyplot.legend()
+           matplotlib.pyplot.title("Generated ECG — Lead I")
+           matplotlib.pyplot.xlabel("Time [s]")
+           matplotlib.pyplot.ylabel("Amplitude [μV]")
+           matplotlib.pyplot.grid(True)
+           matplotlib.pyplot.savefig(outputFileName)
+
       # ------ Collect data in array ----------------------------------------
-      elif outputFormat == OUTPUT_NUMPY:
-         results.append(data)
       else:
-         raise Exception('Invalid output format!')
+         results.append(data)
 
    return results
 

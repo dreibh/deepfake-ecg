@@ -54,9 +54,9 @@ matplotlib.pyplot.plot(ecg_data[:, 5], label="V4")
 matplotlib.pyplot.plot(ecg_data[:, 6], label="V5")
 matplotlib.pyplot.plot(ecg_data[:, 7], label="V6")
 matplotlib.pyplot.legend()
-matplotlib.pyplot.title("Generated ECG - Lead I")
-matplotlib.pyplot.xlabel("Sample")
-matplotlib.pyplot.ylabel("Amplitude (μV)")
+matplotlib.pyplot.title("Generated ECG")
+matplotlib.pyplot.xlabel("Time [s]")
+matplotlib.pyplot.ylabel("Amplitude [μV]")
 matplotlib.pyplot.grid(True)
 
 # Print shape and basic stats
