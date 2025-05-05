@@ -98,7 +98,7 @@ def generateDeepfakeECGs(numberOfECGs:      int = 1,
                             dtype = torch.int32, device = device)
    # Timestamp shape is [ ecgLength ]
    timeStamp = torch.t(timeStamp.reshape(1, ecgLength))
-   # Now, shape is [ 1, ecgLength ]
+   # Now, shape is [ ecgLength, 1 ]
 
    # ====== Generate ECGs ===================================================
    results = [ ]
@@ -116,23 +116,39 @@ def generateDeepfakeECGs(numberOfECGs:      int = 1,
       generatedECG = torch.transpose(generatedECG.squeeze(), 0, 1)
       # Now, shape is [ecgLength, 8].
 
-      # ------ Add time stamp for CSV output --------------------------------
-      if outputFormat == OUTPUT_CSV:
-         # Combine time stamp with generated ECG samples.
-         # Now, shape is [ecgLength, 1+8].
-         generatedECG = torch.cat( (timeStamp, generatedECG), 1 )
-
       # ------ EGC12 computations -------------------------------------------
       if ecgType == DATA_ECG12:
          # Details and formulae:
          # https://ecgwaves.com/topic/ekg-ecg-leads-electrodes-systems-limb-chest-precordial/
 
-         # Lead III = Lead II - Lead I
-         # aVL      = (Leaf I - Lead III) / 2
-         # aVRL     = -(Leaf I + Lead II) / 2
-         # aVF      = (Lead II + Lead III) / 2
+         leadI   = generatedECG[:,0]
+         leadII  = generatedECG[:,1]
 
-         TBD
+         # Computations:
+         # Lead III = Lead II - Lead I
+         # aVL      = (Lead I - Lead III) / 2
+         # aVRL     = -(Lead I + Lead II) / 2
+         # aVF      = (Lead II + Lead III) / 2
+         leadIII = leadII - leadI
+         aVL     = (leadI - leadIII) / 2
+         aVRL    = -(leadI + leadII) / 2
+         aVF     = (leadII + leadIII) / 2
+         # Shape is [ ecgLength ]
+
+         # Reshape to [ ecgLength, 1 ] and combine with generatedECG:
+         generatedECG = torch.cat( ( generatedECG,
+                                     leadIII.reshape(ecgLength, 1),
+                                     aVL.reshape(ecgLength, 1),
+                                     aVRL.reshape(ecgLength, 1),
+                                     aVF.reshape(ecgLength, 1)
+                                    ) , 1 )
+
+      # ------ Add time stamp for CSV output --------------------------------
+      if outputFormat == OUTPUT_CSV:
+         # Combine time stamp with generated ECG samples.
+         # Now, shape is [ecgLength, 1+8].
+         generatedECG = torch.cat( (timeStamp, generatedECG), 1 )
+         # print(generatedECG[:,0])
 
       # ------ Make NumPy data ----------------------------------------------
       data = generatedECG.detach().cpu().numpy()
@@ -150,7 +166,7 @@ def generateDeepfakeECGs(numberOfECGs:      int = 1,
            else:
               raise Exception('Invalid ECG type!')
            numpy.savetxt(outputFileName, data,
-                         header    = 'Timestamp,LeadI,LeadII,V1,V2,V3,V4,V5,V6',
+                         header    = header,
                          comments  = '',
                          delimiter = ',',
                          fmt       = '%i')
