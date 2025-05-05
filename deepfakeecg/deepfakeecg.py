@@ -41,13 +41,13 @@ import pathlib
 import sys
 import torch
 import tqdm
-from typing  import Union, Literal
+import typing
 
 from . import Generator
 
 
 # ------ Constants ----------------------------------------
-ECG_SAMPLING_RATE = 500
+ECG_SAMPLING_RATE = 500   # in Hz
 
 # ------ ECG types ----------------------------------------
 DATA_ECG8         = 8
@@ -64,9 +64,9 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
                          ecgType:            int = DATA_ECG8,
                          ecgLengthInSeconds: int = 10,
                          outputFormat:       int = OUTPUT_NUMPY,
-                         outputFilePattern:  Union[str, pathlib.Path] = None,
+                         outputFilePattern:  typing.Union[str, pathlib.Path] = None,
                          outputStartID:      int = 0,
-                         runOnDevice:        Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu"):
+                         runOnDevice:        typing.Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu"):
    """Generate ECG waveforms using deepfakeecg model, with configurable
       data type (8-lead or 12-lead ECG) and output type (numpy, file).
 
@@ -183,16 +183,16 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
 
 # ###### Generate Deepfake ECG as files #####################################
 def generate(num_of_sample: int,
-             out_dir:       Union[str, pathlib.Path],
+             out_dir:       typing.Union[str, pathlib.Path],
              start_id:      int = 0,
-             runOnDevice:   Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> None:
+             runOnDevice:   typing.Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> None:
    """Generate multiple 8-lead ECG waveforms and save them as ASCII files
 
    Args:
       num_of_sample (int): Number of ECG samples to generate
-      out_dir (Union[str, pathlib.Path]): Output directory path where files will be saved
+      out_dir (typing.Union[str, pathlib.Path]): Output directory path where files will be saved
       start_id (int): Starting ID for the generated samples
-      runOnDevice (Literal["cpu", "cuda"]): Device to run generation on ("cpu" or "cuda")
+      runOnDevice (typing.Literal["cpu", "cuda"]): Device to run generation on ("cpu" or "cuda")
 
    Returns:
       None: Files are saved to the specified output directory with names {start_id}.asc to {start_id + num_of_sample - 1}.asc
@@ -205,7 +205,7 @@ def generate(num_of_sample: int,
 
 
 # ###### Generate Deepfake ECG as NumPy object ##############################
-def generate_as_numpy(runOnDevice: Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> numpy.ndarray:
+def generate_as_numpy(runOnDevice: typing.Literal["cpu", "cuda"] = "cuda" if torch.cuda.is_available() else "cpu") -> numpy.ndarray:
    """Generate a single 8-lead ECG waveform using deepfakeecg model
 
    Args:
