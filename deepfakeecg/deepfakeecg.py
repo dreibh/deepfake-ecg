@@ -84,13 +84,20 @@ def generate_as_numpy(runOnDevice: Literal["cpu", "cuda"] = "cuda" if torch.cuda
     return data
 
 
-DATA_ECG8    = 8
-DATA_ECG12   = 12
+# ------ Constants ----------------------------------------
+ECG_SAMPLING_RATE = 500
 
-OUTPUT_NUMPY = 1
-OUTPUT_ASC   = 2
-OUTPUT_CSV   = 3
+# ------ ECG types ----------------------------------------
+DATA_ECG8         = 8
+DATA_ECG12        = 12
 
+# ------ Output formats -----------------------------------
+OUTPUT_NUMPY      = 1
+OUTPUT_ASC        = 2
+OUTPUT_CSV        = 3
+
+
+# ###### Generate Deepfake ECGs #############################################
 def generate_NEW(numberOfSamples:   int = 1,
                  ecgType:           int = DATA_ECG8,
                  ecgLength:         int = 5000,
@@ -123,22 +130,39 @@ def generate_NEW(numberOfSamples:   int = 1,
    generator.to(device)
    generator.eval()
 
+   # ====== Make milliseconds time stamp tensor =============================
+   timeStamp = torch.arange(0, ECG_SAMPLING_RATE * ecgLength,
+                            ECG_SAMPLING_RATE,
+                            dtype = torch.int32, device = device)
+   # Timestamp shape is [ ecgLength ]
+   timeStamp = torch.t(timeStamp.reshape(1, ecgLength))
+   # Now, shape is [ 1, ecgLength ]
+
    # ====== Generate ECGs ===================================================
    results = [ ]
    for i in tqdm(range(outputStartID, outputStartID + numberOfSamples)):
       # ------ Create random noise  -----------------------------------------
-      noise = torch.Tensor(1, 8, ecgLength).to(device).uniform_(-1, 1)
-      # noise = noise.to(device)
+      # !!!!
+      noise = torch.Tensor(1, 8, ecgLength, device = device).uniform_(-1, 1)
 
       # ------ Generate ECG -------------------------------------------------
       generatedECG = generator(noise)
+      # Output shape is [1, 8, ecgLength].
 
       # ------ Rescale and convert to integer -------------------------------
       generatedECG = generatedECG * 6000
       generatedECG = generatedECG.int()
+      generatedECG = torch.transpose(generatedECG.squeeze(), 0, 1)
+      # Now, shape is [ecgLength, 8].
+
+      # ------ Add time stamp for CSV output --------------------------------
+      if outputFormat == OUTPUT_CSV:
+         # Combine time stamp with generated ECG samples.
+         # Now, shape is [ecgLength, 1+8].
+         generatedECG = torch.cat( (timeStamp, generatedECG), 1 )
 
       # ------ Make NumPy data ----------------------------------------------
-      data = generatedECG.squeeze().t().detach().cpu().numpy()
+      data = generatedECG.detach().cpu().numpy()
 
       # ------ Write output file --------------------------------------------
       if outputFormat in [ OUTPUT_ASC, OUTPUT_CSV ]:
@@ -146,7 +170,11 @@ def generate_NEW(numberOfSamples:   int = 1,
         if outputFormat == OUTPUT_ASC:
            numpy.savetxt(outputFileName, data, fmt = '%i')
         elif outputFormat == OUTPUT_CSV:
-           numpy.savetxt(outputFileName, data, delimiter = ',', fmt = '%i')
+           numpy.savetxt(outputFileName, data,
+                         header    = 'Timestamp,LeadI,LeadII,V1,V2,V3,V4,V5,V6',
+                         comments  = '',
+                         delimiter = ',',
+                         fmt       = '%i')
 
       # ------ Collect data in array ----------------------------------------
       else:
