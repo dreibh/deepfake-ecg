@@ -98,6 +98,7 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
          OUTPUT_PDF: PDF, with plot of the output
       outputFilePattern: Pattern for naming output files, with format() placeholder 'number', e.g. 'ecg-{number:06d}.csv'
       outputStartID: Start ID for file numbering
+      outputLeads: List of output leads for PDF plotting (from: [ 'I', 'II', 'III', 'aVL', 'aVR', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6' ])
       runOnDevice (str): Device to run generation on ('cpu' or 'cuda')
 
    Returns:
