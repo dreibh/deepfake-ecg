@@ -48,7 +48,9 @@ from . import Generator
 
 
 # ------ Constants ----------------------------------------
-ECG_SAMPLING_RATE = 500   # in Hz
+ECG_SAMPLING_RATE             = 500   # in Hz
+ECG_DEFAULT_LENGTH_IN_SECONDS = 10
+ECG_DEFAULT_SCALE_FACTOR      = 6000
 
 # ------ ECG types ----------------------------------------
 DATA_ECG8         = 8
@@ -56,9 +58,10 @@ DATA_ECG12        = 12
 
 # ------ Output formats -----------------------------------
 OUTPUT_NUMPY      = 1
-OUTPUT_ASC        = 2
-OUTPUT_CSV        = 3
-OUTPUT_PDF        = 4
+OUTPUT_TENSOR     = 2
+OUTPUT_ASC        = 10
+OUTPUT_CSV        = 11
+OUTPUT_PDF        = 12
 
 ECG_LEADS = {
    'I':   [  1, 'Lead I',   DATA_ECG8 ],
@@ -79,7 +82,8 @@ ECG_LEADS = {
 # ###### Generate Deepfake ECGs #############################################
 def generateDeepfakeECGs(numberOfECGs:       int = 1,
                          ecgType:            int = DATA_ECG8,
-                         ecgLengthInSeconds: int = 10,
+                         ecgLengthInSeconds: int = ECG_DEFAULT_LENGTH_IN_SECONDS,
+                         ecgScaleFactor:     int = ECG_DEFAULT_SCALE_FACTOR,
                          outputFormat:       int = OUTPUT_NUMPY,
                          outputFilePattern:  typing.Union[str, pathlib.Path] = None,
                          outputStartID:      int = 0,
@@ -92,7 +96,8 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
       numberOfECGs (int): The number of ECGs to generate
       ecgLengthInSeconds (int): The ECG length in seconds
       outputFormat (int): The format of the output
-         OUTPUT_NUMPY: list of NumPy objects
+         OUTPUT_NUMPY: list of NumPy numpy.ndarray objects
+         OUTPUT_TENSOR: list of PyTorch torch.Tensor objects
          OUTPUT_ASC: text, as in the original code
          OUTPUT_CSV: CSV, with additional column for time stamp in milliseconds
          OUTPUT_PDF: PDF, with plot of the output
@@ -102,12 +107,12 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
       runOnDevice (str): Device to run generation on ('cpu' or 'cuda')
 
    Returns:
-      In case of outputFormat OUTPUT_NUMPY:
+      In case of outputFormat OUTPUT_NUMPY or OUTPUT_TENSOR:
          List of arrays of shape (ecgLength, n) containing the ECG data.
          For ECG type DATA_ECG8:
-            numpy.ndarray: [I, II, V1, V2, V3, V4, V5, V6]
+            numpy.ndarray/torch.Tensor: [I, II, V1, V2, V3, V4, V5, V6]
          For ECG type DATA_ECG12:
-            numpy.ndarray: [I, II, V1, V2, V3, V4, V5, V6, III, aVL, aVR, aVF]
+            numpy.ndarray/torch.Tensor: [I, II, V1, V2, V3, V4, V5, V6, III, aVL, aVR, aVF]
    """
 
    # ====== Initialise generator ============================================
@@ -144,8 +149,8 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
       # Output shape is [1, 8, ecgLengthInSamples].
 
       # ------ Rescale and convert to integer -------------------------------
-      generatedECG = generatedECG * 6000
-      generatedECG = generatedECG.int()
+      generatedECG = generatedECG * ecgScaleFactor
+      # generatedECG = generatedECG.int()
       generatedECG = torch.transpose(generatedECG.squeeze(), 0, 1)
       # Now, shape is [ecgLengthInSamples, 8].
 
@@ -160,11 +165,11 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
          # Computations:
          # Lead III = Lead II - Lead I
          # aVL      = (Lead I - Lead III) / 2
-         # aVRL     = -(Lead I + Lead II) / 2
+         # aVR      = -(Lead I + Lead II) / 2
          # aVF      = (Lead II + Lead III) / 2
          leadIII = leadII - leadI
          aVL     = (leadI - leadIII) / 2
-         aVRL    = -(leadI + leadII) / 2
+         aVR     = -(leadI + leadII) / 2
          aVF     = (leadII + leadIII) / 2
          # Shape is [ ecgLengthInSamples ]
 
@@ -172,19 +177,22 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
          generatedECG = torch.cat( ( generatedECG,
                                      leadIII.reshape(ecgLengthInSamples, 1),
                                      aVL.reshape(ecgLengthInSamples, 1),
-                                     aVRL.reshape(ecgLengthInSamples, 1),
+                                     aVR.reshape(ecgLengthInSamples, 1),
                                      aVF.reshape(ecgLengthInSamples, 1)
                                    ) , 1 )
 
       # ------ Add time stamp for CSV output --------------------------------
-      if not outputFormat in [ OUTPUT_ASC, OUTPUT_NUMPY ]:
+      if not outputFormat in [ OUTPUT_ASC, OUTPUT_NUMPY, OUTPUT_TENSOR ]:
          # Combine time stamp with generated ECG samples.
          # Now, shape is [ecgLengthInSamples, 1+8].
          generatedECG = torch.cat( ( timeStamp, generatedECG ), 1 )
          # print(generatedECG[:,0])
 
       # ------ Make NumPy data ----------------------------------------------
-      data = generatedECG.detach().cpu().numpy()
+      if outputFormat == OUTPUT_TENSOR:
+         data = generatedECG
+      else:
+         data = generatedECG.detach().cpu().numpy()
 
       # ------ Write output file --------------------------------------------
       if outputFormat in [ OUTPUT_ASC, OUTPUT_CSV, OUTPUT_PDF ]:
