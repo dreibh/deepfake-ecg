@@ -88,6 +88,7 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
                          outputFilePattern:  typing.Union[str, pathlib.Path] = None,
                          outputStartID:      int = 0,
                          outputLeads:        list = [ 'I' ],
+                         showProgress:       bool = True,
                          runOnDevice:        typing.Literal['cpu', 'cuda'] = 'cuda' if torch.cuda.is_available() else 'cpu'):
    """Generate ECG waveforms using deepfakeecg model, with configurable
       data type (8-lead or 12-lead ECG) and output type (numpy, file).
@@ -139,8 +140,11 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
    # Now, shape is [ ecgLengthInSamples, 1 ]
 
    # ====== Generate ECGs ===================================================
-   results = [ ]
-   for i in tqdm.tqdm(range(outputStartID, outputStartID + numberOfECGs)):
+   results  = [ ]
+   ecgRange = range(outputStartID, outputStartID + numberOfECGs)
+   if showProgress:
+      ecgRange = tqdm.tqdm(ecgRange)
+   for i in ecgRange:
       # ------ Create random noise  -----------------------------------------
       noise = torch.empty(1, 8, ecgLengthInSamples, device = device).uniform_(-1, 1)
 
