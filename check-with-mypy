@@ -38,6 +38,7 @@ SCRIPTS="
    examples/simple.py
 "
 
+# ====== Find locations of Python interpreter and MyPy ======================
 PYTHON="$(whereis python| cut -d' ' -f2)"
 # shellcheck disable=SC2001
 MYPY="$(echo "${PYTHON}" | sed -e 's#/[^/]*$#/mypy#')"
@@ -50,6 +51,7 @@ if [ ! -x "${MYPY}" ] ; then
    exit 1
 fi
 
+# ====== Run MyPy ===========================================================
 for script in $SCRIPTS ; do
    echo -e "\e[34mChecking ${script} ...\e[0m"
    figlet -w 128 "$(basename "${script}")" | print-utf8 -n -C "[\e[36m" "\e[0m]"
