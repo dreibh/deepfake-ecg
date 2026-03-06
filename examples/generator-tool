@@ -49,7 +49,7 @@ def usage(exitCode = 0):
 # ###### Main program #######################################################
 
 # ====== Set defaults =======================================================
-ecgType            = deepfakeecg.DATA_ECG8
+ecgType            = deepfakeecg.DATA_ECG12
 ecgLengthInSeconds = 10
 ecgScaleFactor     = deepfakeecg.ECG_DEFAULT_SCALE_FACTOR
 numberOfECGs       = 1
@@ -156,9 +156,9 @@ if outputFilePattern == None:
 
 if outputLeads == None:
    if ecgType == deepfakeecg.DATA_ECG12:
-      outputLeads = [ 'I', 'II', 'III', 'aVL', 'aVR', 'aVF', 'V1', 'V2', 'V3', 'V4' , 'V5' , 'V6' ]
+      outputLeads = [ 'I', 'II', 'III', 'aVL', 'aVR', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6' ]
    else:
-      outputLeads = [ 'I', 'II', 'V1', 'V2', 'V3', 'V4' , 'V5' , 'V6' ]
+      outputLeads = [ 'I', 'II', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6' ]
 
 
 # ====== Generate ECGs ======================================================

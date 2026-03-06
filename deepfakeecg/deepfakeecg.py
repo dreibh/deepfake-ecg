@@ -41,19 +41,21 @@ import matplotlib.backends.backend_pdf
 import neurokit2
 import numpy
 import os
+import pandas
 import pathlib
 import sys
 import torch
 import tqdm
 import typing
 
-from . import Generator
+from typing import Any, Final
+from .      import Generator
 
 
 # ------ Constants ----------------------------------------
 ECG_SAMPLING_RATE             = 500   # in Hz
 ECG_DEFAULT_LENGTH_IN_SECONDS = 10
-ECG_DEFAULT_SCALE_FACTOR      = 6000
+ECG_DEFAULT_SCALE_FACTOR      = 1   # 6000
 
 # ------ ECG types ----------------------------------------
 DATA_ECG8           = 8
@@ -84,7 +86,7 @@ ECG_LEADS = {
 
 
 # ###### Produce ECG ASCII file from Tensor #################################
-def dataToASCII(ecgResult, outputFileName):
+def dataToASCII(ecgResult, outputFileName : str) -> None:
    # Convert to NumPy, and remove the Timestamp column (0):
    data = ecgResult.detach().cpu().numpy()[1:]
    numpy.savetxt(outputFileName, data, fmt = '%i')
@@ -95,18 +97,25 @@ def dataToCSV(ecgResult, ecgType, outputFileName):
 
    data = ecgResult.detach().cpu().numpy()
 
+   columns        : list[str]
+   orderedColumns : list[str]
    if ecgType == DATA_ECG8:
-      header = 'Timestamp,LeadI,LeadII,V1,V2,V3,V4,V5,V6'
+      columns        = [ 'Timestamp', 'I', 'II', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6' ]
+      orderedColumns = columns
    elif ecgType == DATA_ECG12:
-      header = 'Timestamp,LeadI,LeadII,V1,V2,V3,V4,V5,V6,LeadIII,aVL,aVR,aVF'
+      columns        = [ 'Timestamp', 'I', 'II', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'III', 'aVL', 'aVR', 'aVF' ]
+      orderedColumns = [ 'Timestamp', 'I', 'II', 'III', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'aVL', 'aVR', 'aVF' ]
    else:
       raise Exception('Invalid ECG type!')
+   header : Final[str] = ','.join(columns)
 
-   numpy.savetxt(outputFileName, data,
-                 header    = header,
-                 comments  = '',
-                 delimiter = ',',
-                 fmt       = '%i')
+   dataFrame : Final[pandas.DataFrame] = \
+      pandas.DataFrame(data, columns = columns)[orderedColumns]
+   dataFrame.to_csv(outputFileName,
+                    index        = False,
+                    sep          = ',',
+                    float_format = '%.6',   # DeepFake ECG has 6 digits precision!
+                    compression  = 'infer')
 
 
 # ###### Produce ECG PDF file from Tensor ###################################
