@@ -39,9 +39,11 @@ import matplotlib.pyplot
 import numpy
 import torch
 
+from typing            import Any, Final
+
 
 # ###### Print usage and exit ###############################################
-def usage(exitCode = 0):
+def usage(exitCode : int = 0) -> None:
    sys.stdout.write('Usage: ' + sys.argv[0] + ' [-t|--type ECG8|ECG12] [-f|--format numpy|ascii|csv|pdf|pdf+analysis] [-o|--output filename_pattern] [-n|--number number] [-s|--start-id number] [-a|--scalefactor factor] [-e|--leads {I,II,III,aVL,aVR,aVF,V1,V2,V3,V4,V5,V6}] [-d|--device cpu|cuda] [-v|--version]\n')
    sys.exit(exitCode)
 
@@ -49,15 +51,15 @@ def usage(exitCode = 0):
 # ###### Main program #######################################################
 
 # ====== Set defaults =======================================================
-ecgType            = deepfakeecg.DATA_ECG12
-ecgLengthInSeconds = 10
-ecgScaleFactor     = deepfakeecg.ECG_DEFAULT_SCALE_FACTOR
-numberOfECGs       = 1
-outputFilePattern  = None
-outputFormat       = deepfakeecg.OUTPUT_CSV
-outputStartID      = 0
-outputLeads        = None
-runOnDevice        = "cuda" if torch.cuda.is_available() else "cpu"
+ecgType            : int              = deepfakeecg.DATA_ECG12
+ecgLengthInSeconds : int              = 10
+ecgScaleFactor     : float            = deepfakeecg.ECG_DEFAULT_SCALE_FACTOR
+numberOfECGs       : int              = 1
+outputFilePattern  : str | None       = None
+outputFormat       : int              = deepfakeecg.OUTPUT_CSV
+outputStartID      : int              = 0
+outputLeads        : list[str] | None = None
+runOnDevice        : str              = "cuda" if torch.cuda.is_available() else "cpu"
 
 # ====== Handle arguments ===================================================
 try:
@@ -153,12 +155,14 @@ if outputFilePattern == None:
       outputFilePattern = 'ecg-{number}.pdf'
    else:
       outputFilePattern = 'ecg-{number}.asc'
+assert outputFilePattern is not None
 
 if outputLeads == None:
    if ecgType == deepfakeecg.DATA_ECG12:
       outputLeads = [ 'I', 'II', 'III', 'aVL', 'aVR', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6' ]
    else:
       outputLeads = [ 'I', 'II', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6' ]
+assert outputLeads is not None
 
 
 # ====== Generate ECGs ======================================================

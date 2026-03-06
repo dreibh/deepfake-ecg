@@ -53,23 +53,23 @@ from .      import Generator
 
 
 # ------ Constants ----------------------------------------
-ECG_SAMPLING_RATE             = 500   # in Hz
-ECG_DEFAULT_LENGTH_IN_SECONDS = 10
-ECG_DEFAULT_SCALE_FACTOR      = 1   # 6000
+ECG_SAMPLING_RATE             : Final[int]   = 500   # in Hz
+ECG_DEFAULT_LENGTH_IN_SECONDS : Final[int]   = 10
+ECG_DEFAULT_SCALE_FACTOR      : Final[float] = 1.0   # 6000.0
 
 # ------ ECG types ----------------------------------------
-DATA_ECG8           = 8
-DATA_ECG12          = 12
+DATA_ECG8           : Final[int] = 8
+DATA_ECG12          : Final[int] = 12
 
 # ------ Output formats -----------------------------------
-OUTPUT_NUMPY        = 1
-OUTPUT_TENSOR       = 2
-OUTPUT_ASC          = 10
-OUTPUT_CSV          = 11
-OUTPUT_PDF          = 20
-OUTPUT_PDF_ANALYSIS = 21
+OUTPUT_NUMPY        : Final[int] = 1
+OUTPUT_TENSOR       : Final[int] = 2
+OUTPUT_ASC          : Final[int] = 10
+OUTPUT_CSV          : Final[int] = 11
+OUTPUT_PDF          : Final[int] = 20
+OUTPUT_PDF_ANALYSIS : Final[int] = 21
 
-ECG_LEADS = {
+ECG_LEADS : Final[dict[str, list[Any]]] = {
    'I':   [  1, 'Lead I',   DATA_ECG8  ],
    'II':  [  2, 'Lead II',  DATA_ECG8  ],
    'V1':  [  3, 'V1',       DATA_ECG8  ],
@@ -86,14 +86,16 @@ ECG_LEADS = {
 
 
 # ###### Produce ECG ASCII file from Tensor #################################
-def dataToASCII(ecgResult, outputFileName : str) -> None:
+def dataToASCII(ecgResult : torch.Tensor, outputFileName : str) -> None:
    # Convert to NumPy, and remove the Timestamp column (0):
    data = ecgResult.detach().cpu().numpy()[1:]
    numpy.savetxt(outputFileName, data, fmt = '%i')
 
 
 # ###### Produce ECG CSV file from Tensor ###################################
-def dataToCSV(ecgResult, ecgType, outputFileName):
+def dataToCSV(ecgResult      : torch.Tensor,
+              ecgType        : int,
+              outputFileName : str) -> None:
 
    data = ecgResult.detach().cpu().numpy()
 
@@ -114,13 +116,17 @@ def dataToCSV(ecgResult, ecgType, outputFileName):
    dataFrame.to_csv(outputFileName,
                     index        = False,
                     sep          = ',',
-                    float_format = '%.6',   # DeepFake ECG has 6 digits precision!
+                    float_format = '%.6f',   # DeepFake ECG has 6 digits precision!
                     compression  = 'infer')
 
 
 # ###### Produce ECG PDF file from Tensor ###################################
-def dataToPDF(ecgResult, ecgType, outputLeads, outputFileName,
-              outputFormat = OUTPUT_PDF, idNumber = None):
+def dataToPDF(ecgResult      : torch.Tensor,
+              ecgType        : int,
+              outputLeads    : list[str],
+              outputFileName : str,
+              outputFormat   : int = OUTPUT_PDF,
+              idNumber       : int | None = None) -> None:
 
    # 1. Convert to NumPy
    # 2. Remove the Timestamp column (0)
@@ -159,9 +165,6 @@ def dataToPDF(ecgResult, ecgType, outputLeads, outputFileName,
    if outputFormat == OUTPUT_PDF_ANALYSIS:
       leadI = data[0]
 
-      print(data[0])
-      print(len(data[0]))
-
       signals, info = neurokit2.ecg_process(leadI, sampling_rate = ECG_SAMPLING_RATE)
       neurokit2.ecg_plot(signals, info)
 
@@ -176,16 +179,16 @@ def dataToPDF(ecgResult, ecgType, outputLeads, outputFileName,
 
 
 # ###### Generate Deepfake ECGs #############################################
-def generateDeepfakeECGs(numberOfECGs:       int = 1,
-                         ecgType:            int = DATA_ECG8,
-                         ecgLengthInSeconds: int = ECG_DEFAULT_LENGTH_IN_SECONDS,
-                         ecgScaleFactor:     int = ECG_DEFAULT_SCALE_FACTOR,
-                         outputFormat:       int = OUTPUT_NUMPY,
-                         outputFilePattern:  typing.Union[str, pathlib.Path] = None,
-                         outputStartID:      int = 0,
-                         outputLeads:        list = [ 'I' ],
-                         showProgress:       bool = True,
-                         runOnDevice:        typing.Literal['cpu', 'cuda'] = 'cuda' if torch.cuda.is_available() else 'cpu'):
+def generateDeepfakeECGs(numberOfECGs:       int       = 1,
+                         ecgType:            int       = DATA_ECG12,
+                         ecgLengthInSeconds: int       = ECG_DEFAULT_LENGTH_IN_SECONDS,
+                         ecgScaleFactor:     float     = ECG_DEFAULT_SCALE_FACTOR,
+                         outputFormat:       int       = OUTPUT_NUMPY,
+                         outputFilePattern:  str       = None,
+                         outputStartID:      int       = 0,
+                         outputLeads:        list[str] = [ 'I' ],
+                         showProgress:       bool      = True,
+                         runOnDevice:        str       = 'cuda' if torch.cuda.is_available() else 'cpu'):
    """Generate ECG waveforms using deepfakeecg model, with configurable
       data type (8-lead or 12-lead ECG) and output type (numpy, file).
 
@@ -229,9 +232,9 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
 
    # ====== Make milliseconds time stamp tensor =============================
    ecgLengthInSamples = ecgLengthInSeconds * ECG_SAMPLING_RATE
-   timeStamp = torch.arange(0, ECG_SAMPLING_RATE * ecgLengthInSamples,
-                            ECG_SAMPLING_RATE,
-                            dtype = torch.int32, device = device)
+   timeStamp = torch.arange(0, ecgLengthInSeconds,
+                            1.0 / ECG_SAMPLING_RATE,
+                            dtype = torch.float32, device = device)
    # Timestamp shape is [ ecgLengthInSamples ]
    timeStamp = torch.t(timeStamp.reshape(1, ecgLengthInSamples))
    # Now, shape is [ ecgLengthInSamples, 1 ]
@@ -320,14 +323,14 @@ def generateDeepfakeECGs(numberOfECGs:       int = 1,
 def generate(num_of_sample: int,
              out_dir:       typing.Union[str, pathlib.Path],
              start_id:      int = 0,
-             runOnDevice:   typing.Literal['cpu', 'cuda'] = 'cuda' if torch.cuda.is_available() else 'cpu') -> None:
+             runOnDevice:   str = 'cuda' if torch.cuda.is_available() else 'cpu') -> None:
    """Generate multiple 8-lead ECG waveforms and save them as ASCII files
 
    Args:
       num_of_sample (int): Number of ECG samples to generate
       out_dir (typing.Union[str, pathlib.Path]): Output directory path where files will be saved
       start_id (int): Starting ID for the generated samples
-      runOnDevice (typing.Literal['cpu', 'cuda']): Device to run generation on ('cpu' or 'cuda')
+      runOnDevice (str): Device to run generation on ('cpu' or 'cuda')
 
    Returns:
       None: Files are saved to the specified output directory with names {start_id}.asc to {start_id + num_of_sample - 1}.asc
@@ -343,7 +346,7 @@ def generate(num_of_sample: int,
 
 
 # ###### Generate Deepfake ECG as NumPy object ##############################
-def generate_as_numpy(runOnDevice: typing.Literal['cpu', 'cuda'] = 'cuda' if torch.cuda.is_available() else 'cpu') -> numpy.ndarray:
+def generate_as_numpy(runOnDevice: str = 'cuda' if torch.cuda.is_available() else 'cpu') -> numpy.ndarray:
    """Generate a single 8-lead ECG waveform using deepfakeecg model
 
    Args:
