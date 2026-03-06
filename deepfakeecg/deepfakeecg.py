@@ -15,7 +15,7 @@
 # Generator Library
 # Copyright (C) 2021-2025 by Vajira Thambawita
 # Copyright (C) 2021-2025 by Turtle <erencemayez@gmail.com>
-# Copyright (C) 2025 by Thomas Dreibholz
+# Copyright (C) 2025-2026 by Thomas Dreibholz
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -49,7 +49,8 @@ import tqdm
 import typing
 
 from typing import Any, Final
-from .      import Generator
+
+import deepfakeecg.models
 
 
 # ------ Constants ----------------------------------------
@@ -184,11 +185,11 @@ def generateDeepfakeECGs(numberOfECGs:       int       = 1,
                          ecgLengthInSeconds: int       = ECG_DEFAULT_LENGTH_IN_SECONDS,
                          ecgScaleFactor:     float     = ECG_DEFAULT_SCALE_FACTOR,
                          outputFormat:       int       = OUTPUT_NUMPY,
-                         outputFilePattern:  str       = None,
+                         outputFilePattern:  str       = 'ecg-{number:06d}.out',
                          outputStartID:      int       = 0,
                          outputLeads:        list[str] = [ 'I' ],
                          showProgress:       bool      = True,
-                         runOnDevice:        str       = 'cuda' if torch.cuda.is_available() else 'cpu'):
+                         runOnDevice:        str       = 'cuda' if torch.cuda.is_available() else 'cpu') -> list[torch.Tensor] | list[numpy.typing.NDArray[numpy.float32]]:
    """Generate ECG waveforms using deepfakeecg model, with configurable
       data type (8-lead or 12-lead ECG) and output type (numpy, file).
 
@@ -220,7 +221,8 @@ def generateDeepfakeECGs(numberOfECGs:       int       = 1,
    root_dir = pathlib.Path(__file__).parent
    device = torch.device(runOnDevice)
 
-   generator = Generator()
+   # generator = deepfakeecg.models.Generator()
+   generator = deepfakeecg.models.pulse2pulse.Pulse2pulseGenerator()
    checkpoint = torch.load(
       os.path.join(root_dir, 'checkpoints/g_stat.pt'),
       map_location = device,
@@ -242,7 +244,7 @@ def generateDeepfakeECGs(numberOfECGs:       int       = 1,
    # ====== Generate ECGs ===================================================
    results  = [ ]
 
-   ecgRange = range(outputStartID, outputStartID + numberOfECGs)
+   ecgRange : range | tqdm.tqdm[int] = range(outputStartID, outputStartID + numberOfECGs)
    if showProgress:
       ecgRange = tqdm.tqdm(ecgRange)
    for i in ecgRange:
@@ -294,7 +296,7 @@ def generateDeepfakeECGs(numberOfECGs:       int       = 1,
 
       # ------ Write output file --------------------------------------------
       if outputFormat in [ OUTPUT_ASC, OUTPUT_CSV, OUTPUT_PDF, OUTPUT_PDF_ANALYSIS ]:
-        outputFileName = outputFilePattern.format(number = i)
+        outputFileName : str = outputFilePattern.format(number = i)
 
         # ------ ASCII text -------------------------------------------------
         if outputFormat == OUTPUT_ASC:
@@ -346,7 +348,7 @@ def generate(num_of_sample: int,
 
 
 # ###### Generate Deepfake ECG as NumPy object ##############################
-def generate_as_numpy(runOnDevice: str = 'cuda' if torch.cuda.is_available() else 'cpu') -> numpy.ndarray:
+def generate_as_numpy(runOnDevice: str = 'cuda' if torch.cuda.is_available() else 'cpu') -> numpy.typing.NDArray[numpy.float32]:
    """Generate a single 8-lead ECG waveform using deepfakeecg model
 
    Args:
