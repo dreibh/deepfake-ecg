@@ -37,12 +37,23 @@ SCRIPTS="
    examples/generate_to_file.py
    examples/simple.py
 "
+
 PYTHON="$(whereis python| cut -d' ' -f2)"
+# shellcheck disable=SC2001
+MYPY="$(echo "${PYTHON}" | sed -e 's#/[^/]*$#/mypy#')"
+if [ ! -x "${PYTHON}" ] ; then
+   echo >&2 "ERROR: Unable to identify Python executable!"
+   exit 1
+fi
+if [ ! -x "${MYPY}" ] ; then
+   echo >&2 "ERROR: Unable to identify MyPy executable!"
+   exit 1
+fi
 
 for script in $SCRIPTS ; do
    echo -e "\e[34mChecking ${script} ...\e[0m"
    figlet -w 128 "$(basename "${script}")" | print-utf8 -n -C "[\e[36m" "\e[0m]"
-   mypy --strict \
+   "${MYPY}" --strict \
       --install-types --non-interactive \
       --ignore-missing-imports          \
       --show-traceback                  \
