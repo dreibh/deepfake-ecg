@@ -189,7 +189,7 @@ def generateDeepfakeECGs(numberOfECGs:       int       = 1,
                          outputStartID:      int       = 0,
                          outputLeads:        list[str] = [ 'I' ],
                          showProgress:       bool      = True,
-                         runOnDevice:        str       = 'cuda' if torch.cuda.is_available() else 'cpu') -> list[torch.Tensor] | list[numpy.typing.NDArray[numpy.float32]]:
+                         runOnDevice:        str       = 'cuda' if torch.cuda.is_available() else 'cpu') -> list[torch.Tensor | numpy.typing.NDArray[numpy.float32]]:
    """Generate ECG waveforms using deepfakeecg model, with configurable
       data type (8-lead or 12-lead ECG) and output type (numpy, file).
 
@@ -242,7 +242,7 @@ def generateDeepfakeECGs(numberOfECGs:       int       = 1,
    # Now, shape is [ ecgLengthInSamples, 1 ]
 
    # ====== Generate ECGs ===================================================
-   results  = [ ]
+   results : list[torch.Tensor | numpy.typing.NDArray[numpy.float32]] = [ ]
 
    ecgRange : range | tqdm.tqdm[int] = range(outputStartID, outputStartID + numberOfECGs)
    if showProgress:
@@ -362,4 +362,5 @@ def generate_as_numpy(runOnDevice: str = 'cuda' if torch.cuda.is_available() els
                                   ecgType            = DATA_ECG8,
                                   ecgLengthInSeconds = int(5000 / ECG_SAMPLING_RATE),
                                   outputFormat       = OUTPUT_NUMPY)
+   assert isinstance(results[0], numpy.ndarray)
    return results[0]

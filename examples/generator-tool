@@ -133,7 +133,7 @@ try:
          outputLeads = optarg.split(',')
       elif option in ( '-v', '--version' ):
          sys.stdout.write('PyTorch version: ' + torch.__version__ + '\n')
-         sys.stdout.write('CUDA version:    ' + torch.version.cuda + '\n')
+         sys.stdout.write('CUDA version:    ' + str(torch.version.cuda) + '\n')
          sys.stdout.write('CUDA available:  ' + ('yes' if torch.cuda.is_available() else 'no') + '\n')
          sys.stdout.write('Device:          ' + runOnDevice + '\n')
          sys.exit(1)
