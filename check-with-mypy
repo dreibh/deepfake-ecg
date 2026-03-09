@@ -29,7 +29,7 @@
 #
 # Contact: Thomas Dreibholz <dreibh@simula.no>
 
-set -u
+set -eu
 
 SCRIPTS="
    examples/generator-tool
