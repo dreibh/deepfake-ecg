@@ -56,7 +56,7 @@ import deepfakeecg.models
 # ------ Constants ----------------------------------------
 ECG_SAMPLING_RATE             : Final[int]   = 500   # in Hz
 ECG_DEFAULT_LENGTH_IN_SECONDS : Final[int]   = 10
-ECG_DEFAULT_SCALE_FACTOR      : Final[float] = 1.0   # 6000.0
+ECG_DEFAULT_SCALE_FACTOR      : Final[float] = 6.0
 
 # ------ ECG types ----------------------------------------
 DATA_ECG8           : Final[int] = 8
@@ -132,7 +132,7 @@ def dataToPDF(ecgResult      : torch.Tensor,
    # 1. Convert to NumPy
    # 2. Remove the Timestamp column (0)
    # 3. Convert from µV to mV
-   data = ecgResult.t().detach().cpu().numpy()[1:] / 1000
+   data = ecgResult.t().detach().cpu().numpy()[1:]
    # print(data)
 
    if idNumber != None:
@@ -145,11 +145,12 @@ def dataToPDF(ecgResult      : torch.Tensor,
 
    # ------ ECG-12 -------------------------------------------------------
    if ecgType == DATA_ECG12:
+      print(data)
       ecg_plot.plot(data,
                     title       = 'ECG-12' + titleExtension,
                     sample_rate = ECG_SAMPLING_RATE,
                     lead_index  = [ 'I', 'II', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'III', 'aVR', 'aVL', 'aVF' ],
-                    lead_order  = [0, 1, 8, 9, 10, 11, 2, 3, 4, 5, 6, 7],
+                    lead_order  = [ 0, 1, 8, 9, 10, 11, 2, 3, 4, 5, 6, 7 ],
                     show_grid   = True)
    # ------ ECG-8 --------------------------------------------------------
    else:
@@ -157,7 +158,7 @@ def dataToPDF(ecgResult      : torch.Tensor,
                     title       = 'ECG-8' + titleExtension,
                     sample_rate = ECG_SAMPLING_RATE,
                     lead_index  = [ 'I', 'II', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6' ],
-                    lead_order  = [0, 1, 2, 3, 4, 5, 6, 7],
+                    lead_order  = [ 0, 1, 2, 3, 4, 5, 6, 7 ],
                     show_grid   = True)
 
    pdf.savefig(matplotlib.pyplot.gcf())
