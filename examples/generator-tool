@@ -166,11 +166,15 @@ assert outputLeads is not None
 
 
 # ====== Generate ECGs ======================================================
-results = deepfakeecg.generateDeepfakeECGs(numberOfECGs, ecgType,
-                                           ecgLengthInSeconds = ecgLengthInSeconds,
-                                           ecgScaleFactor     = ecgScaleFactor,
-                                           outputFormat       = outputFormat,
-                                           outputFilePattern  = outputFilePattern,
-                                           outputStartID      = outputStartID,
-                                           outputLeads        = outputLeads,
-                                           runOnDevice        = runOnDevice)
+try:
+   results = deepfakeecg.generateDeepfakeECGs(numberOfECGs, ecgType,
+                                             ecgLengthInSeconds = ecgLengthInSeconds,
+                                             ecgScaleFactor     = ecgScaleFactor,
+                                             outputFormat       = outputFormat,
+                                             outputFilePattern  = outputFilePattern,
+                                             outputStartID      = outputStartID,
+                                             outputLeads        = outputLeads,
+                                             runOnDevice        = runOnDevice)
+except KeyboardInterrupt:
+   sys.stdout.write('\nSIGINT\n')
+   sys.exit(1)
